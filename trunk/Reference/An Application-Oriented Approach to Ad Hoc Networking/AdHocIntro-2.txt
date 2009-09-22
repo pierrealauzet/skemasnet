@@ -1,0 +1,40 @@
+about?
+	Defining of Spontanious Network itself.
+
+Envrionment
+MANET
+
+Problem definition(Issue)
+	1. The network must operate independently of an access point infrasturucture even in mobile.
+		- address allocation, name assignment
+	2. The network must operate independently of a pre-established or centralized network management 			infrastructure, while still providing administrative services needed to support application.
+		- security, firewall
+
+Proposed term.
+	Spontaneous Network: the human interactions that take place in the context of such an application can be 		leveraged to create the necessary configuration infrastructure.
+
+	Users do not need to identify all the (human and computational) participants or to administratively configure 	their computers in advance//, while they are still connected to their home network. ??
+
+	Good applcation candidates
+	ex) interactive presentation, collaborative editing, shared whiteboards, game.
+
+	Intentionality that can be leveraged in order to create an ordered method for initializing the network 			configuration.
+
+	Spontaneous networks have a limited extent in both space and time.
+
+	it is expected that significant changes will be relatively infrequent compared to the lifetime of the 	network.
+
+Goal
+	Empower users to create computer networks with the same ease, flexibility and spontaneity as the human 		interactions they are intended to facilitate.
+
+Challenges
+	1. Network boundaries are poorly defined
+	2. The network is not planned
+	3. Hosts are not pre-configured
+	4. There are no central servers.
+	5. Users are not experts.
+
+Enabling Techniques
+	Automatic/Dynami configuration
+	Security
+	Peer-to-peer operation
