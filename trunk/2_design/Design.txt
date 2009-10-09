@@ -1,0 +1,61 @@
+Secure protocol to share keys
+
+
+
+
+Conditions:
+
+
+
+-----------------------------------------
+Separating/partitioning:
+
+3 users are leaving a network to create a new one.
+Users know already each other and can trust them. One user start the new network generating a new key. The 2 others send request to him in order to obtain the new session key.
+
+A group manager uses the network to choose users that will leave the network with him to create a new private network. Of course, he will use the channel that everybody knows in order to propagate the new key. In this case, inside hackers could control the trafic and recover the new key.
+
+
+3 possibilities:
+1. drop a secure network and create a new one (no matter about resources) NO CONVENIENT
+2. use the existing network and share a new key --> fast way but security issues with other members that can read the traffic EASIEST
+3. use the existing network and use a group creating key to create and share new key (group creating key)
+in this case, we drop the current network and loose resources, MORE SECURE
+
+
+
+--------------------------------------
+
+
+-------------------------------------
+Merging:
+
+1 user of every network is delegating to merge the 2 groups. They using a specific channel to create a session key. They share the key. Every delegate broadcast the key over every network. Broadcasting the new key to every network will give the new key to the groups. Even if somebody try to still the new key, it will be encrypted with every previous session key. Asking for the new key is available till the first networks is broken.
+
+Transition period is available during which both keys are valid. A time limit (5min) is counting down...
+After the time limit, user who did not join the new network would be isolated.
+
+Isolated users 
+Each host has the key and is able to share the key. We use two channels : one to share the key and one to communicate.
+In this way, users are always able to broadcast and send the key to a new user.
+
+
+
+In a recursive way, a previous network users can delegate somebody again to share the new key with the new network a join the new network again (late person)
+
+
+
+2 cases:
+1. merging and create a new network with group A & B (merge both resources)
+2. group B join the group A (keep & merge or not resources of group B for both group --> choice)
+
+Users meet together thanks to a device able to use different channel from wireless (wireless + something else)
+-----------------------------------
+
+
+----------------------------
+Middleware to build:
+
+- see a user list
+- create a user list for new network
+----------------------------
