@@ -1,0 +1,31 @@
+[Problem definition]
+
+- We are in the case of:
+
+        - two spontaneous networks decide to merge together or
+
+        - a subset of users in a spontaneous network choose to create their
+        own network, independent of original one,
+
+and we wish to find a transparent and easy way to let users perfom such kind of
+operation in an almost automatic way.
+
+
+[Key point]
+
+- Our main idea is to use pre-existing networks to share new keys, in order
+to propagate them in an automatic and transparent way for users, without the
+need to connect each other to get the new key;
+
+- in the case of merger two users, one in each pre-established network, are
+delegated to create the new key and share it with other users belonging to
+their own network;
+
+- in case of a separating network, we use a Group Key Agreement protocol to
+create a new temporary network, then generate a new session key and use this
+network to propagate it among all users belonging to the group wishing to
+separate;
+
+- we do not use GKA for the final new network cause it is not flexible enough
+(in the case of new users or temporary isolated users of previous network) and 
+not suitable for small devices;
