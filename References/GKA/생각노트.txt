@@ -18,7 +18,8 @@ private key를 session key로 이용
 관련연구
 	1) GKA
 		join/Leave할때마다 common key(encryption key)를 새로 생성해야 한다.: 몇가지 GKA가 필요로 하는 join/leave시의 메시지 조사(view 업데이트 포함)
-	2) ssl를 확장한 gruop communication 조사.(비슷한거 있는지)
+		GKA.. 키 생성할때 노드중 하나라도 fault상태라면 네트워크에서 제외? 또는 생성이 매우 느려진다.
+	2) ssl를 확장한 gruop communication 조사.(비슷한거 있는지): private key를 이용하는 group communication.
 
 Central Server가 있을땐??
 Network A의 Central Server: S1
