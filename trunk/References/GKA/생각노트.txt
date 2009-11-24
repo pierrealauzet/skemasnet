@@ -1,0 +1,35 @@
+m개의 노드가 있는 network A
+n개의 노드가 있는 network B
+(fully distributed case)왜 fully distributed로 구현 할라고 하는데?  목적 환경이 그러해서 ㅋ
+
+두개가 합쳐 진다 했을때(모든 멤버들은 같은 view를 가지고 있어야 함으로)
+1) B를 없애고 B의 모든 노드가 A에 새로 조인하는데 필요한 메시지는 m+ (m+1) + (m+2) + ... + (m+n-1)
+2) 만약 대리자를 이용해서 합친다면: m+n + 대리자 뽑는데 걸리는 메시지 = c(n+m)
+  Network A는 Network B의 멤버리스트가 포함된 메시지를 모든 m 노드에 전송
+  Network B는 Network A의 멤버리스트가 포함된 메시지를 모든 n 노드에 전송
+
+관련 연구
+	1) 합치지 않고 proxy를 이용해서 처리하는 방법
+
+private key를 session key로 이용
+	Join하는데 총 노드수 만큼의 메시지 필요.(view 업데이트를 위해): n
+	Drop하는데 총 노드수 + 새로운 session키 배포하는데 필요한 메시지= n+새로운 키 만들 녀석 선출하는 메시지+n-1
+
+관련연구
+	1) GKA
+		join/Leave할때마다 common key(encryption key)를 새로 생성해야 한다.: 몇가지 GKA가 필요로 하는 join/leave시의 메시지 조사(view 업데이트 포함)
+	2) ssl를 확장한 gruop communication 조사.(비슷한거 있는지)
+
+Central Server가 있을땐??
+Network A의 Central Server: S1
+Network B의 Central Server: S2
+
+only S1, S2가 멤버 리스트 관리
+	join 할때도 s1에게만 request
+	leave 할때도 s1에게만 request, 새로운 키 만들어 다시 아래 n개의 노드에게 키 배포
+	Merging할땐? S1, S2가 새로운 키 만들고, 멤버 리스트 교환한 후 아래 n, m개의 노드에게 키 배포.
+but 서버가 죽거나(죽으면 ;; 먼가 대책이 필요함) 네트워크에서 leave할때 새로운 서버 선출하고 그녀석에게 멤버 리스트 주고, 아래 애들한테 서버 바뀌었다고 메시지 전송.
+
+
+two-party key 조사.
+	두개 이상의 party가 존재할지 parties들의 common key를 생성하는 방법.(diffy helman)
