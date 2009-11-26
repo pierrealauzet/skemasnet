@@ -1,0 +1,37 @@
+Context:
+
+How to elect a trustable leader with a human agreement:
+Social human interactive choice. The chosen leader send a broadcast message. A confirmation message should be sent by each user who decided to join the network.
+We have to leverage human interaction.
+
+If a bad guy is on the network, it is a general problem of spontaneous network. Using a public key infrastructure, we can check the users.
+
+We want to create small network (like 50 users): meetings, playing games, etc.
+
+
+Summary:
+
+Main idea: use the overhead of GKA.
+
+GKA have 2 problems
+- need a leader election
+- big size of message is needed
+
+So we try to reduce the overhead: 
+- number of messages
+- size of messages
+- leveraging the human interaction
+
+We are in the contect in which we don't use a PKI. Without using a PKI, there is no way to anthenticate user in a secure way.
+All the users in the network choose a leader in this way. 2 leaders authenticate each other in this way as well.
+
+Users or gamers can belong to different companies, institutes, etc.
+
+We are considering these cases:
+- joining
+- leaving
+- merging
+
+Leaving users:
+- he notifies that he is leaving
+- he does not
