@@ -14,7 +14,9 @@ Summary:
 Main idea: use the overhead of GKA.
 
 GKA have 2 problems
+////////////- need many number of message to create a new session key.
 - need a leader election
+////////////(??? how to solve this problem???)
 - big size of message is needed
 
 So we try to reduce the overhead: 
@@ -22,7 +24,9 @@ So we try to reduce the overhead:
 - size of messages
 - leveraging the human interaction
 
-We are in the contect in which we don't use a PKI. Without using a PKI, there is no way to anthenticate user in a secure way.
+We are in the contect in which we don't use a PKI. Without using a PKI, 
+there is no way to anthenticate user in a secure way
+////////////(=> There is no way to trust each other when they have no information of others)
 All the users in the network choose a leader in this way. 2 leaders authenticate each other in this way as well.
 
 Users or gamers can belong to different companies, institutes, etc.
