@@ -12,7 +12,7 @@
 #define GKA_LEAVE	1
 #define GKA_MERGE	2
 #define GKA_CLAIM	3
-#define GKA_INIT_JOIN	4
+#define GKA_INIT	4
 #define GKA_INIT_LEAVE 5
 
 
@@ -58,6 +58,8 @@ class GKAAgent : public Agent {
 
   char createPubKey();
   char createSessionKey();
+
+  void addMember(int memberAddr);
 
   list <int> *memberList;
 };
