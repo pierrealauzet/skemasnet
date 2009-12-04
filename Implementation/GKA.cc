@@ -40,14 +40,11 @@ int GKAAgent::command(int argc, const char*const* argv)
 		list<int>::iterator it;
 		for(it=agent_->memberList->begin(); it!=agent_->memberList->end(); it++)
 		{
-			addMember(*it);//memberList->push_back(*it);
+			addMember(*it);
 		}
 		addMember(agent_->addr());
 		addMember(here_.addr_);
-		//memberList->push_back(agent_->addr());
-		//memberList->push_back(here_.addr_);
-      // return TCL_OK, so the calling function knows that the
-      // command has been processed
+		
       return (TCL_OK);
     }	
 	if (strcmp(argv[1], "merge") == 0) {
@@ -57,19 +54,16 @@ int GKAAgent::command(int argc, const char*const* argv)
 		list<int>::iterator it;
 		for(it=agent_->memberList->begin(); it!=agent_->memberList->end(); it++)
 		{
-			addMember(*it);//memberList->push_back(*it);
+			addMember(*it);
 		}
 		agent_->memberList->clear();
 		for(it=memberList->begin(); it!=memberList->end(); it++)
 		{
-			agent_->addMember(*it);//push_back(*it);
+			agent_->addMember(*it);
 		}		
 
-		requestMerge(agent_->addr());
+		requestMerge(agent_->addr());		
 		
-		//memberList->push_back(agent_->addr());
-		// return TCL_OK, so the calling function knows that the
-		// command has been processed
 		return (TCL_OK);
 	}	
   }
@@ -95,21 +89,72 @@ void GKAAgent::recv(Packet* pkt, Handler*)
   
   switch(hdr->messageType)
   {
+  case GKA_CLAIM_JOIN:
+	  if(hdr->isAck==0)
+	  {
+		  printf("Recv Claim_Join request : at %d.%d from %d.%d member#(%d)\n", here_.addr_, here_.port_, hdrip->saddr(), hdrip->sport(), memberList->size());			 
+		  handleClaim(pkt, GKA_CLAIM_JOIN);
+	  }
+	  else
+	  {
+		  printf("Recv Claim_Join Ack : at %d.%d from %d.%d member#(%d)\n", here_.addr_, here_.port_, hdrip->saddr(), hdrip->sport(), memberList->size());	
+		  static int cnt=1;
+		  cnt++;
+		  if(cnt==memberList->size())
+		  {
+			handleJoinReq(pkt);
+			cnt=1;
+		  }
+	  }
+	  break;
+  case GKA_CLAIM_MERGE:
+	  if(hdr->isAck==0)
+	  {
+		  printf("Recv Claim_Merge request : at %d.%d from %d.%d member#(%d)\n", here_.addr_, here_.port_, hdrip->saddr(), hdrip->sport(), memberList->size());			 
+		  handleClaim(pkt, GKA_CLAIM_MERGE);
+	  }
+	  else
+	  {
+		  printf("Recv Claim_Merge Ack : at %d.%d from %d.%d member#(%d)\n", here_.addr_, here_.port_, hdrip->saddr(), hdrip->sport(), memberList->size());	
+		  static int cnt=1;
+		  cnt++;
+		  if(cnt==memberList->size())
+		  {
+			  handleJoinReq(pkt);
+			  cnt=1;
+		  }
+	  }
+	  break;
+  case GKA_CLAIM_LEAVE:
+	  if(hdr->isAck==0)
+	  {
+		  printf("Recv Claim_Leave request : at %d.%d from %d.%d member#(%d)\n", here_.addr_, here_.port_, hdrip->saddr(), hdrip->sport(), memberList->size());			 
+		  handleClaim(pkt, GKA_CLAIM_LEAVE);
+	  }
+	  else
+	  {
+		  printf("Recv Claim_Leave Ack : at %d.%d from %d.%d member#(%d)\n", here_.addr_, here_.port_, hdrip->saddr(), hdrip->sport(), memberList->size());	
+		  static int cnt=1;
+		  cnt++;
+		  if(cnt==memberList->size())
+		  {
+			  handleLeaveReq(pkt);
+			  cnt=1;
+		  }
+	  }
+	  break;
   case GKA_JOIN:
 	  if(hdr->isAck==0)
 	  {
-		 printf("Recv Join request : at %d.%d from %d.%d\n", here_.addr_, here_.port_, hdrip->saddr(), hdrip->sport());			 
-		 handleJoinReq(pkt);
-
 		 addMember(this->addr());
-		 /*list<int>::iterator it;
+		 printf("Recv Join request : at %d.%d from %d.%d member#(%d)\n", here_.addr_, here_.port_, hdrip->saddr(), hdrip->sport(), memberList->size());	
 		 
-		 for(it=memberList->begin(); it!=memberList->end(); it++)
-		 {
-			 if(*it == this->addr()) break;
+		 if(memberList->size()>1) 
+			 requestClaimToBeALeader(pkt, GKA_CLAIM_JOIN);
+		 else{
+			 handleJoinReq(pkt);
 		 }
-		 if(it==memberList->end())
-			 memberList->push_back(this->addr());*/
+
 		 Packet::free(pkt);
 	  }
 	  else
@@ -123,7 +168,8 @@ void GKAAgent::recv(Packet* pkt, Handler*)
 	  if(hdr->isAck==0)
 	  {
 		  printf("Recv Leave request : at %d.%d from %d.%d\n", here_.addr_, here_.port_, hdrip->saddr(), hdrip->sport());			 
-		  handleLeaveReq(pkt);
+		  //handleLeaveReq(pkt);
+		  requestClaimToBeALeader(pkt, GKA_CLAIM_LEAVE);
 		  Packet::free(pkt);
 	  }
 	  else
@@ -137,7 +183,7 @@ void GKAAgent::recv(Packet* pkt, Handler*)
 	  if(hdr->isAck==0)
 	  {
 		  printf("Recv Merge request : at %d.%d from %d.%d\n", here_.addr_, here_.port_, hdrip->saddr(), hdrip->sport());			 
-		  handleJoinReq(pkt);
+		  requestClaimToBeALeader(pkt, GKA_CLAIM_MERGE);
 		  
 		  addMember(this->addr());		 
 		  Packet::free(pkt);
@@ -195,28 +241,6 @@ void GKAAgent::recv(Packet* pkt, Handler*)
   }
 }
 
-void GKAAgent::handleInitReq(Packet *pkt, int type)
-{
-	// Access the IP header for the received packet:
-	hdr_ip* hdrip = hdr_ip::access(pkt);	
-
-	// Create a new packet
-	Packet* pktret = allocpkt();
-
-	// Access the Ping header for the new packet:
-	hdr_gka* hdrret = hdr_gka::access(pktret);
-	hdr_ip* hdripret = hdr_ip::access(pktret);
-	
-	hdripret->dst_.addr_ = hdrip->saddr();
-	hdripret->dst_.port_ = 0;
-
-	hdrret->messageType = type;
-	hdrret->publicKey = createPubKey();
-	// Store the current time in the 'send_time' field
-	hdrret->isAck = 1;
-	// Send the packet
-	send(pktret, 0);
-}
 
 void GKAAgent::requestJoin(int destAddr)
 {
@@ -234,6 +258,7 @@ void GKAAgent::requestJoin(int destAddr)
 	hdr->publicKey = createPubKey();
 	// Store the current time in the 'send_time' field
 	hdr->isAck = 0;
+	hdr->requester =here_.addr_;
 	// Send the packet
 	send(pkt, 0);
 }
@@ -254,6 +279,7 @@ void GKAAgent::requestMerge(int destAddr)
 	hdr->publicKey = createPubKey();
 	// Store the current time in the 'send_time' field
 	hdr->isAck = 0;
+	hdr->requester = here_.addr_;
 	// Send the packet
 	send(pkt, 0);
 }
@@ -279,11 +305,88 @@ void GKAAgent::requestLeave()
 
 		hdrip->dst_.addr_ = destAddr;
 		hdrip->dst_.port_ = 0;
+		hdr->requester = here_.addr_;
 
 		hdr->messageType = GKA_LEAVE;				
 		hdr->isAck = 0;		
 		send(pkt, 0);
 	}
+}
+
+void GKAAgent::requestClaimToBeALeader(Packet *pkt, int type)
+{
+	hdr_gka* hdr = hdr_gka::access(pkt);
+	hdr_ip * hdrip = hdr_ip::access(pkt);
+
+	list<int>::iterator it;
+	for(it=memberList->begin(); it !=memberList->end(); it++)
+	{
+		int destAddr = *it;
+		if(destAddr==here_.addr_) continue;
+	
+		Packet* pktret = allocpkt();
+
+		hdr_ip* hdripret = hdr_ip::access(pktret);
+		hdr_gka* hdrret = hdr_gka::access(pktret);
+
+		hdripret->dst_.addr_ = destAddr;
+		hdripret->dst_.port_ = 0;
+
+		hdrret->requester = hdr->requester;
+
+		hdrret->messageType = type;			
+		hdrret->isAck=0;		
+		// Send the packet
+		send(pktret, 0);
+	}	
+}
+
+void GKAAgent::handleClaim(Packet * pkt, int type)
+{
+	// Access the IP header for the received packet:
+	hdr_ip* hdrip = hdr_ip::access(pkt);	
+	hdr_gka *hdr = hdr_gka::access(pkt);
+
+	// Create a new packet
+	Packet* pktret = allocpkt();
+
+	// Access the Ping header for the new packet:
+	hdr_gka* hdrret = hdr_gka::access(pktret);
+	hdr_ip* hdripret = hdr_ip::access(pktret);
+
+	hdripret->dst_.addr_ = hdrip->saddr();
+	hdripret->dst_.port_ = 0;
+
+	hdrret->messageType = type;
+	hdrret->publicKey = createPubKey();
+	// Store the current time in the 'send_time' field
+	hdrret->isAck = 1;
+	hdrret->requester = hdr->requester;
+	// Send the packet
+	send(pktret, 0);
+}
+
+void GKAAgent::handleInitReq(Packet *pkt, int type)
+{
+	// Access the IP header for the received packet:
+	hdr_ip* hdrip = hdr_ip::access(pkt);	
+
+	// Create a new packet
+	Packet* pktret = allocpkt();
+
+	// Access the Ping header for the new packet:
+	hdr_gka* hdrret = hdr_gka::access(pktret);
+	hdr_ip* hdripret = hdr_ip::access(pktret);
+
+	hdripret->dst_.addr_ = hdrip->saddr();
+	hdripret->dst_.port_ = 0;
+
+	hdrret->messageType = type;
+	hdrret->publicKey = createPubKey();
+	// Store the current time in the 'send_time' field
+	hdrret->isAck = 1;
+	// Send the packet
+	send(pktret, 0);
 }
 
 void GKAAgent::handleJoinReq(Packet *pkt)
@@ -293,13 +396,13 @@ void GKAAgent::handleJoinReq(Packet *pkt)
 	// Access the Ping header for the received packet:
 	hdr_gka* hdr = hdr_gka::access(pkt);	
 
-	if(memberList->size()==0)
+	if(memberList->size()==1)
 	{
 		Packet* pktret = allocpkt();
 		hdr_gka* hdrret = hdr_gka::access(pktret);
 		hdr_ip* hdripret = hdr_ip::access(pktret);
 
-		hdripret->dst_.addr_ = hdrip->saddr();
+		hdripret->dst_.addr_ = hdr->requester;
 		hdripret->dst_.port_ = 0;
 
 		hdrret->sessionKey = createSessionKey();
@@ -327,20 +430,13 @@ void GKAAgent::handleJoinReq(Packet *pkt)
 			hdrret->messageType = GKA_INIT;			
 			hdrret->isAck=0;
 			hdrret->publicKey = hdr->publicKey;
-			hdrret->requester = hdrip->saddr();
+			hdrret->requester = hdr->requester;
 			// Send the packet
 			send(pktret, 0);
 		}		  		
 	}
-	addMember(hdrip->saddr());
-	/*list<int>::iterator it;
+	addMember(hdr->requester);
 	
-	for(it = memberList->begin(); it!=memberList->end(); it++)
-	{
-		if(*it == hdrip->saddr())return;
-	}
-
-	memberList->push_back(hdrip->saddr());	*/
 }
 
 void GKAAgent::handleLeaveReq(Packet* pkt)
@@ -348,7 +444,7 @@ void GKAAgent::handleLeaveReq(Packet* pkt)
 	hdr_ip* hdrip = hdr_ip::access(pkt);	
 	hdr_gka* hdr = hdr_gka::access(pkt);	
 
-	memberList->remove(hdrip->saddr());
+	memberList->remove(hdr->requester);
 
 	if(memberList->size()==0)
 	{
@@ -356,7 +452,7 @@ void GKAAgent::handleLeaveReq(Packet* pkt)
 		hdr_gka* hdrret = hdr_gka::access(pktret);
 		hdr_ip* hdripret = hdr_ip::access(pktret);
 
-		hdripret->dst_.addr_ = hdrip->saddr();
+		hdripret->dst_.addr_ = hdr->requester;
 		hdripret->dst_.port_ = 0;
 
 		hdrret->sessionKey = createSessionKey();
@@ -384,7 +480,7 @@ void GKAAgent::handleLeaveReq(Packet* pkt)
 			hdrret->messageType = GKA_INIT_LEAVE;
 			hdrret->isAck=0;
 			hdrret->publicKey = hdr->publicKey;
-			hdrret->requester = hdrip->saddr();
+			hdrret->requester = hdr->requester;
 			send(pktret, 0);
 		}		  		
 	}
