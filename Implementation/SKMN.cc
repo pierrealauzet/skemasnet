@@ -24,7 +24,11 @@ public:
 SKMNAgent::SKMNAgent() : Agent(PT_SKMN)
 {
   bind("packetSize_", &size_);  
-  memberList = new list<int>;  
+  memberList = new list<SKMNAgent*>;  
+  watingToJoin = new list<SKMNAgent*>;
+  merge_cnt=0;
+
+  addMember(this);
 }
 
 
@@ -37,13 +41,12 @@ int SKMNAgent::command(int argc, const char*const* argv)
 		//printf("%d \n", agent_->addr());					  
 		requestJoin(agent_->addr());
 
-		list<int>::iterator it;
+		list<SKMNAgent*>::iterator it;
 		for(it=agent_->memberList->begin(); it!=agent_->memberList->end(); it++)
 		{
 			addMember(*it);
 		}
-		addMember(agent_->addr());
-		addMember(here_.addr_);
+		addMember(agent_);
 		
       return (TCL_OK);
     }	
@@ -51,15 +54,15 @@ int SKMNAgent::command(int argc, const char*const* argv)
 
 		SKMNAgent *agent_ = (SKMNAgent*) TclObject::lookup(argv[2]);;
 		//printf("%d \n", agent_->addr());					  
-		list<int>::iterator it;
+		list<SKMNAgent*>::iterator it;
 		for(it=agent_->memberList->begin(); it!=agent_->memberList->end(); it++)
 		{
-			addMember(*it);
+			addWaitingToJoin(*it);
 		}
-		agent_->memberList->clear();
+		agent_->watingToJoin->clear();
 		for(it=memberList->begin(); it!=memberList->end(); it++)
 		{
-			agent_->addMember(*it);
+			agent_->addWaitingToJoin(*it);
 		}		
 
 		requestMerge(agent_->addr());		
@@ -99,13 +102,25 @@ void SKMNAgent::recv(Packet* pkt, Handler*)
 	  else
 	  {
 		  printf("Recv Claim_Merge Ack : at %d.%d from %d.%d member#(%d)", here_.addr_, here_.port_, hdrip->saddr(), hdrip->sport(), memberList->size());	
-		  printMemberList();
-		  static int cnt=1;
-		  cnt++;
-		  if(cnt==memberList->size())
+		  printMemberList();		  
+		  merge_cnt++;
+		  if(merge_cnt==(memberList->size()-1))
 		  {
-			  handleJoinReq(pkt);
-			  cnt=1;
+			  if(hdr->requester!=this)
+			  {
+				  list<SKMNAgent*>::iterator it;
+				  for(it=watingToJoin->begin(); it!=watingToJoin->end(); it++)
+				  {
+					  addMember(*it);
+				  }
+				  //printMemberList();		  
+				  broadcastSessionKey(this, SKMN_JOIN);
+				  watingToJoin->clear();
+				  //printWatingList();
+			  }
+			  //handleJoinReq(pkt);
+			 // printf("I'm a leader!!\n");
+			  merge_cnt=0;
 		  }
 	  }
 	  break;
@@ -132,7 +147,6 @@ void SKMNAgent::recv(Packet* pkt, Handler*)
   case SKMN_JOIN:
 	  if(hdr->isAck==0)
 	  {
-		 addMember(this->addr());
 		 addMember(hdr->requester);
 		 printf("Recv Join request : at %d.%d from %d.%d member#(%d)", here_.addr_, here_.port_, hdrip->saddr(), hdrip->sport(), memberList->size());	
 		 printMemberList();
@@ -141,8 +155,13 @@ void SKMNAgent::recv(Packet* pkt, Handler*)
 		 Packet::free(pkt);
 	  }
 	  else
-	  {		  
-		  addMember(hdr->requester);
+	  {	
+		  list<SKMNAgent*>::iterator it;
+		  for(it=hdr->requester->memberList->begin(); it!=hdr->requester->memberList->end(); it++)
+		  {
+			  addMember(*it);
+		  }
+		  
 		  printf("Recv new Session key: at %d.%d from %d.%d, member#(%d)", here_.addr_, here_.port_, hdrip->saddr(), hdrip->sport(), memberList->size());		  
 		  printMemberList();
 		  Packet::free(pkt);
@@ -169,10 +188,11 @@ void SKMNAgent::recv(Packet* pkt, Handler*)
   case SKMN_MERGE:
 	  if(hdr->isAck==0)
 	  {
-		  printf("Recv Merge request : at %d.%d from %d.%d", here_.addr_, here_.port_, hdrip->saddr(), hdrip->sport());			 
+		  printf("Recv Merge request : at %d.%d from %d.%d, member#(%d)", here_.addr_, here_.port_, hdrip->saddr(), hdrip->sport(), memberList->size());			 
+		  printMemberList();		  
+		  //hdr->requester = here_.addr_;
 		  requestClaimToBeALeader(pkt, SKMN_CLAIM_MERGE);
-		  
-		  addMember(this->addr());		 
+		 
 		  Packet::free(pkt);
 	  }
 	  else
@@ -201,7 +221,11 @@ void SKMNAgent::requestJoin(int destAddr)
 	hdr->publicKey = createPubKey();
 	// Store the current time in the 'send_time' field
 	hdr->isAck = 0;
-	hdr->requester =here_.addr_;
+	hdr->requester = this;
+
+	hdr_cmn* hdr_c = hdr_cmn::access(pkt);
+	hdr_c->size() = SIZE_OF_KEY;
+
 	// Send the packet
 	send(pkt, 0);
 }
@@ -222,38 +246,44 @@ void SKMNAgent::requestMerge(int destAddr)
 	hdr->publicKey = createPubKey();
 	// Store the current time in the 'send_time' field
 	hdr->isAck = 0;
-	hdr->requester = here_.addr_;
+	hdr->requester = this;
 	// Send the packet
+
+	hdr_cmn* hdr_c = hdr_cmn::access(pkt);
+	hdr_c->size() = SIZE_OF_KEY*memberList->size();
+
 	send(pkt, 0);
+
+	requestClaimToBeALeader(pkt, SKMN_CLAIM_MERGE);
 }
 
 void SKMNAgent::requestLeave()
 {
-	list<int>::iterator it;
+	if(memberList->size()==1) return;
+	list<SKMNAgent*>::iterator it;
+
 	for(it = memberList->begin(); it!=memberList->end(); it++)
 	{
-		if((*it) !=here_.addr_) break;
+		if((*it) !=this) break;
 	}	
 
-	if(it!=memberList->end())
-	{
-		int destAddr = *it;
+	SKMNAgent *agent = (*it);
+	int destAddr = agent->addr();
 
-		// Create a new packet
-		Packet* pkt = allocpkt();
+	// Create a new packet
+	Packet* pkt = allocpkt();
 
-		// Access the Ping header for the new packet:
-		hdr_skmn* hdr = hdr_skmn::access(pkt);
-		hdr_ip * hdrip = hdr_ip::access(pkt);
+	// Access the Ping header for the new packet:
+	hdr_skmn* hdr = hdr_skmn::access(pkt);
+	hdr_ip * hdrip = hdr_ip::access(pkt);
 
-		hdrip->dst_.addr_ = destAddr;
-		hdrip->dst_.port_ = 0;
-		hdr->requester = here_.addr_;
+	hdrip->dst_.addr_ = destAddr;
+	hdrip->dst_.port_ = 0;
+	hdr->requester = this;
 
-		hdr->messageType = SKMN_LEAVE;				
-		hdr->isAck = 0;		
-		send(pkt, 0);
-	}
+	hdr->messageType = SKMN_LEAVE;				
+	hdr->isAck = 0;		
+	send(pkt, 0);
 }
 
 void SKMNAgent::requestClaimToBeALeader(Packet *pkt, int type)
@@ -261,10 +291,11 @@ void SKMNAgent::requestClaimToBeALeader(Packet *pkt, int type)
 	hdr_skmn* hdr = hdr_skmn::access(pkt);
 	hdr_ip * hdrip = hdr_ip::access(pkt);
 
-	list<int>::iterator it;
+	list<SKMNAgent*>::iterator it;
 	for(it=memberList->begin(); it !=memberList->end(); it++)
 	{
-		int destAddr = *it;
+		SKMNAgent* agent = *it;
+		int destAddr = agent->addr();
 		if(destAddr==here_.addr_) continue;
 	
 		Packet* pktret = allocpkt();
@@ -360,12 +391,13 @@ char SKMNAgent::createSessionKey()
 	return 'c';
 }
 
-void SKMNAgent::broadcastSessionKey(int requester, int type)
+void SKMNAgent::broadcastSessionKey(SKMNAgent* requester, int type)
 {
-	list<int>::iterator it;
+	list<SKMNAgent *>::iterator it;
 	for(it=memberList->begin(); it !=memberList->end(); it++)
 	{
-		int destAddr = *it;
+		SKMNAgent* agent = *it;
+		int destAddr = agent->addr();
 
 		if(destAddr == here_.addr_) continue;
 		// Create a new packet
@@ -382,33 +414,63 @@ void SKMNAgent::broadcastSessionKey(int requester, int type)
 		hdrret->isAck=1;
 		hdrret->sessionKey = createSessionKey();
 		hdrret->requester = requester;
+
+		hdr_cmn* hdr = hdr_cmn::access(pktret);
+		hdr->size() = SIZE_OF_KEY;
+
 		// Send the packet
 		send(pktret, 0);
 	}
 }
 
-void SKMNAgent::addMember(int memberAddr)
+void SKMNAgent::addMember(SKMNAgent *node)
 {
-	list<int>::iterator it;
+	list<SKMNAgent*>::iterator it;
 
 	for(it= memberList->begin(); it!=memberList->end(); it++)
 	{
-		if((*it)==memberAddr) break;
+		if((*it)==node) break;
 	}
 
 	if(it==memberList->end())
-		memberList->push_back(memberAddr);
+		memberList->push_back(node);
 }
 
+void SKMNAgent::addWaitingToJoin(SKMNAgent *node)
+{
+	list<SKMNAgent*>::iterator it;
+
+	for(it= watingToJoin->begin(); it!=watingToJoin->end(); it++)
+	{
+		if((*it)==node) break;
+	}
+
+	if(it==watingToJoin->end())
+		watingToJoin->push_back(node);
+}
 
 void SKMNAgent::printMemberList()
 {
-	list<int>::iterator it;
+	list<SKMNAgent*>::iterator it;
 
 	printf("(");
 	for(it=memberList->begin(); it!=memberList->end(); it++)
 	{
-		printf("%d, ", *it);
+		SKMNAgent * agent = *it;
+		printf("%d, ",agent->addr());
+	}
+	printf(")\n");
+}
+
+void SKMNAgent::printWatingList()
+{
+	list<SKMNAgent*>::iterator it;
+
+	printf("(");
+	for(it=watingToJoin->begin(); it!=watingToJoin->end(); it++)
+	{
+		SKMNAgent *agent = *it;;
+		printf("%d, ", agent->addr());
 	}
 	printf(")\n");
 }
