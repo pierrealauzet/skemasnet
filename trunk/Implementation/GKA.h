@@ -18,34 +18,13 @@
 #define GKA_INIT_LEAVE	5
 
 
-struct hdr_gka {
-	//0 join
-	//1 leave
-	//2 merge
-	//3 claim to a leader	
-	int messageType;
-	int isAck;
-	int requester;
-	char publicKey;
-	char sessionKey;
-	// Header access methods
-	static int offset_; // required by PacketHeaderManager
-	inline static int& offset() { return offset_; }
-	inline static hdr_gka* access(const Packet* p) {
-		return (hdr_gka*) p->access(offset_);
-	}
-};
-
-struct struct_pubkey{
-	int node_addr;
-	string key;
-};
+#define SIZE_OF_KEY 64 //size of pubkey in bytes.
 
 class GKAAgent : public Agent {
  public:
   GKAAgent();
   
-  void boradcastSessionKey();
+  void broadcastSessionKey(GKAAgent *requester, int type);
   void requestJoin(int destAddr);
   void requestLeave();
   void requestMerge(int destAddr);
@@ -57,8 +36,7 @@ class GKAAgent : public Agent {
   void handleMerging(Packet*);
   void handleClaim(Packet *, int type);
 
-  
-  
+  void printMemberList();  
 
   int command(int argc, const char*const* argv);
   void recv(Packet*, Handler*); 
@@ -66,7 +44,27 @@ class GKAAgent : public Agent {
   char createPubKey();
   char createSessionKey();
 
-  void addMember(int memberAddr);
+  void addMember(GKAAgent* memberAddr);
 
-  list <int> *memberList;
+  list <GKAAgent*> *memberList;
+
+  int cnt;
+};
+
+struct hdr_gka {
+	//0 join
+	//1 leave
+	//2 merge
+	//3 claim to a leader	
+	int messageType;
+	int isAck;
+	GKAAgent* requester;
+	char publicKey;
+	char sessionKey;
+	// Header access methods
+	static int offset_; // required by PacketHeaderManager
+	inline static int& offset() { return offset_; }
+	inline static hdr_gka* access(const Packet* p) {
+		return (hdr_gka*) p->access(offset_);
+	}
 };
