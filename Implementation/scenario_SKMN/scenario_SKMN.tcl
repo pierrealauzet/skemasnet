@@ -1,5 +1,5 @@
 set ns [new Simulator]
-set nf [open out_SKMN_merge_50_nodes.nam w]
+set nf [open out_SKMN_merge_10_nodes.nam w]
 #$ns namtrace-all $nf
 $ns trace-all $nf
 
@@ -76,11 +76,11 @@ for {set i 0} {$i < 50} {incr i} {
 # Required by leave and merge cases; in the merge case please
 # uncomment the line about m() network;
 
-#for {set i 1} {$i < 10} {incr i} {
-#for {set i 1} {$i < 20} {incr i} {
-#for {set i 1} {$i < 30} {incr i} {
-#for {set i 1} {$i < 40} {incr i} {
-for {set i 1} {$i < 50} {incr i} {
+for {set i 1} {$i < 10} {incr i} {
+#for {set i 1} {$i < 20} {incr i} 
+#for {set i 1} {$i < 30} {incr i} 
+#for {set i 1} {$i < 40} {incr i} 
+#for {set i 1} {$i < 50} {incr i} 
 $ns at [expr ($i*0.5)] "$skmn_n($i) join $skmn_n(0)"
 $ns at [expr ($i*0.5)] "$skmn_m($i) join $skmn_m(0)"
 }
