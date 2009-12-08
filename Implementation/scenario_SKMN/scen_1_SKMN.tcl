@@ -1,0 +1,48 @@
+set ns [new Simulator]
+set nf [open out_SKMN.nam w]
+$ns namtrace-all $nf
+
+proc finish {} {
+        global ns nf
+        $ns flush-trace
+        close $nf
+        exec nam out.nam &
+        exit 0
+}
+
+#Topology Configuration
+
+for {set i 0} {$i < 10} {incr i} {
+  set n($i) [$ns node]
+  set m($i) [$ns node]
+}
+
+for {set i 0} {$i < 9} {incr i} {
+  $ns duplex-link $n($i) $n([expr ($i+1)]) 1Mb 10ms DropTail
+  $ns duplex-link $m($i) $m([expr ($i+1)]) 1Mb 10ms DropTail
+}
+$ns duplex-link $m(0) $n(0) 1Mb 10ms DropTail
+
+#Create a SKMN agent and attach it to node n0
+
+for {set i 0} {$i < 10} {incr i} {
+  set skmn_n($i) [new Agent/SKMN]
+  set skmn_m($i) [new Agent/SKMN]
+}
+
+for {set i 0} {$i < 10} {incr i} {
+  $ns attach-agent $n($i) $skmn_n($i)
+  $ns attach-agent $m($i) $skmn_m($i)
+}
+
+for {set i 0} {$i < 9} {incr i} {
+$ns at [expr (0.5+$i*0.5)] "$skmn_n($i) join $skmn_n(9)"
+$ns at [expr (0.5+$i*0.5)] "$skmn_m($i) join $skmn_m(9)"
+}
+
+$ns at 3.0 "$skmn_n(1) leave"
+
+$ns at 5.0 "$skmn_n(0) merge $skmn_m(0)"
+#$ns at 5.5 "$skmn_m(5) join $skmn_m(0)"
+$ns at 10.0 "finish"
+$ns run
