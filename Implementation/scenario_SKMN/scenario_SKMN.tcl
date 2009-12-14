@@ -1,3 +1,9 @@
+#1 join
+#2 leave
+#3 merge
+set simul 3
+set numOfNode  50
+
 set ns [new Simulator]
 set nf [open out_SKMN_merge_50_nodes.nam w]
 #$ns namtrace-all $nf
@@ -71,31 +77,32 @@ for {set i 0} {$i < 50} {incr i} {
   $ns attach-agent $m($i) $skmn_m($i)
 }
 
-
 # Simulation - Join of all nodes; only one network considered
 # Required by leave and merge cases; in the merge case please
 # uncomment the line about m() network;
 
-#for {set i 1} {$i < 10} {incr i} {
-#for {set i 1} {$i < 20} {incr i} {
-#for {set i 1} {$i < 30} {incr i} {
-#for {set i 1} {$i < 40} {incr i} {
-for {set i 1} {$i < 50} {incr i} {
-$ns at [expr ($i*0.5)] "$skmn_n($i) join $skmn_n(0)"
-$ns at [expr ($i*0.5)] "$skmn_m($i) join $skmn_m(0)"
+for {set i 1} {$i < $numOfNode} {incr i} {
+$ns at [expr ($i*1.0)] "$skmn_n($i) join $skmn_n(0)"
+  if {$simul == 3} {
+    $ns at [expr ($i*1.0)] "$skmn_m($i) join $skmn_m(0)"
+  }
 }
 
 
 # Simulation - One node leaving; only one network considered
 # ---> Plese comment this part if unnecessary <---
 
-#$ns at 90.0 "$skmn_n(3) leave"
+if {$simul == 2} { 
+  $ns at 90.0 "$skmn_n(3) leave"
+}
 
 
 # Simulation - Merging of 2 networks
 # ---> Plese comment this part if unnecessary <---
 
-$ns at 80.0 "$skmn_n(0) merge $skmn_m(0)"
+if {$simul == 3} {
+  $ns at 80.0 "$skmn_n(0) merge $skmn_m(0)"
+}
 
 $ns at 100.0 "finish"
 $ns run
