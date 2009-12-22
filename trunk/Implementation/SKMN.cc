@@ -416,10 +416,17 @@ void SKMNAgent::broadcastSessionKey(SKMNAgent* requester, int type)
 		hdrret->requester = requester;
 
 		hdr_cmn* hdr = hdr_cmn::access(pktret);
-		if(agent!=requester)
-			hdr->size() = SIZE_OF_KEY*2;
-		else
-			hdr->size() = SIZE_OF_KEY+SIZE_OF_KEY*(memberList->size()-1);
+
+		if(type!=SKMN_MERGE)
+		{
+			if(agent!=requester)
+				hdr->size() = SIZE_OF_KEY*2;
+			else
+				hdr->size() = SIZE_OF_KEY+SIZE_OF_KEY*(memberList->size()-1);
+		}
+		{
+			hdr->size() = SIZE_OF_KEY+SIZE_OF_KEY*(memberList->size()/2);
+		}
 
 		// Send the packet
 		send(pktret, 0);
